@@ -1,0 +1,76 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\input{newcommand.tex}
+
+\title{Neural Networks: Theory and Practice}
+\author{Yu Gai}
+\date{}
+
+\DeclareMathOperator{\diag}{diag}
+\newcommand{\pp}[2]{{\frac{\partial {#1}}{\partial {#2}}}}
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Multi-layer Perceptron}
+
+\subsection{Forward and Backward Propagation}
+
+Given an input $x \in \bbr^d$, the forward propagation rule of a $L$-layer perceptron with weights $\{W_l\}_{l = 1}^L$, biases $\{b_l\}_{l = 1}^L$, and activation function $\sigma: \bbr \mapsto \bbr$ is defined as
+\begin{alignat*}{2}
+h_0 & \triangleq x \\
+\bar{h}_l & \triangleq W_l h_{l - 1} + b_l && \qquad l \in [L - 1] \\
+h_l & \triangleq \sigma (\bar{h}_l) && \qquad l \in [L - 1] \\
+h_L & \triangleq W_L h_{L - 1} + b_L
+\end{alignat*}
+where $[n] \triangleq \{1, ..., n\}$, $W_l \in \bbr^{d_l \times d_{l - 1}}$ with $d_0 \triangleq d$, $b_l \in \bbr^{d_l}$, and the application of $\sigma$ is pointwise.
+Typical choices of $\sigma$ are the logistic function $\sigma (\cdot) = \frac1{1 + \exp (-\cdot)}$, the hyperbolic tangent $\sigma = \tanh$, and the rectified linear unit (ReLU) $\sigma (\cdot) = \max (0, \cdot)$.
+
+Given a supervision signal $y \in \caly$ and a loss function $\ell: \bbr^{d_L} \times \caly \mapsto \bbr$, it follows from the chain rule that the corresponding backward propagation rule is
+\begin{alignat*}{2}
+h_L' & \triangleq \nabla_{h_L} \ell (h_L, y) \\
+W_L' & \triangleq \nabla_{W_L} \ell (h_L, y) = h_L' h_{L - 1}^T \\
+b_L' & \triangleq \nabla_{b_L} \ell (h_L, y) = h_L' \\
+h_{L - 1}' & \triangleq \nabla_{h_{L - 1}} \ell (h_L, y) = W_L^T h_L' \\
+\bar{h}_l' & \triangleq \nabla_{\bar{h}_l} \ell (h_L, y) = \diag (\sigma' (\bar{h}_l)) h_{l + 1}' && \qquad l \in [L - 1] \\
+W_l' & \triangleq \nabla_{W_l} \ell (h_L, y) = \bar{h}_l' h_{l - 1}^T && \qquad l \in [L - 1] \\
+b_l' & \triangleq \nabla_{b_l} \ell (h_L, y) = \bar{h}_l' && \qquad l \in [L - 1] \\
+h_l' & \triangleq \nabla_{h_l} \ell (h_L, y) = W_l^T \bar{h}_l' && \qquad l = 0, ..., L - 2
+\end{alignat*}
+where $\diag (x)_{i j} \triangleq x_i \delta_{i j}$ and the application of $\sigma'$ is again pointwise.
+
+\subsection{Approximation theorems}
+
+Let $I_d \triangleq [0, 1]^d$ and let $C (I_d)$ be the space of continuous functions on $I_d$.
+
+\begin{theorem}[\cite{cybenko1989approximation}]
+$2$-layer perceptrons with logistic activation function are dense in $C (I_d)$.
+\end{theorem}
+
+\begin{theorem}
+$2$-layer perceptrons with logistic activation function are dense in $L^1 (I_d)$.
+\end{theorem}
+
+\begin{theorem}
+$2$-layer perceptrons with logistic activation function are dense in $L^2 (I_d)$.
+\end{theorem}
+
+\subsection{The VC-dimension of multi-layer perceptrons}
+
+\subsection{Empirical risk minimization with stochastic gradient descent}
+
+\section{Convolutional neural networks}
+
+\subsection{Motivation}
+
+\bibliographystyle{unsrt}
+\bibliography{written}
+
+\end{document}
