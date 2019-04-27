@@ -3,13 +3,17 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsthm}
+\usepackage{dsfont}
+\usepackage{commath}
 \input{newcommand.tex}
 
 \title{Neural Networks: Theory and Practice}
 \author{Yu Gai}
 \date{}
 
+\DeclareMathOperator{\deg}{deg}
 \DeclareMathOperator{\diag}{diag}
+\newcommand{\ind}{{\mathds 1}}
 \newcommand{\pp}[2]{{\frac{\partial {#1}}{\partial {#2}}}}
 \newtheorem{theorem}{Theorem}
 
@@ -19,30 +23,33 @@
 
 \tableofcontents
 
+\newpage
+
 \section{Multi-layer Perceptron}
 
 \subsection{Forward and Backward Propagation}
 
-Given an input $x \in \bbr^d$, the forward propagation rule of a $L$-layer perceptron with weights $\{W_l\}_{l = 1}^L$, biases $\{b_l\}_{l = 1}^L$, and activation function $\sigma: \bbr \mapsto \bbr$ is defined as
+Given an input $x \in \bbr^d$, the forward propagation rule of a $L$-layer perceptron with weights $\{W^{(l)}\}_{l = 1}^L$, biases $\{b_l\}_{l = 1}^L$, and activation function $\sigma: \bbr \mapsto \bbr$ is defined as
 \begin{alignat*}{2}
 h_0 & \triangleq x \\
-\bar{h}_l & \triangleq W_l h_{l - 1} + b_l && \qquad l \in [L - 1] \\
+\bar{h}_l & \triangleq W^{(l)} h_{l - 1} + b_l && \qquad l \in [L - 1] \\
 h_l & \triangleq \sigma (\bar{h}_l) && \qquad l \in [L - 1] \\
-h_L & \triangleq W_L h_{L - 1} + b_L
+h_L & \triangleq W^{(L)} h_{L - 1} + b_L
 \end{alignat*}
-where $[n] \triangleq \{1, ..., n\}$, $W_l \in \bbr^{d_l \times d_{l - 1}}$ with $d_0 \triangleq d$, $b_l \in \bbr^{d_l}$, and the application of $\sigma$ is pointwise.
+where $[n] \triangleq \{1, ..., n\}$, $W^{(l)} \in \bbr^{d_l \times d_{l - 1}}$ with $d_0 \triangleq d$, $b_l \in \bbr^{d_l}$, and the application of $\sigma$ is pointwise.
 Typical choices of $\sigma$ are the logistic function $\sigma (\cdot) = \frac1{1 + \exp (-\cdot)}$, the hyperbolic tangent $\sigma = \tanh$, and the rectified linear unit (ReLU) $\sigma (\cdot) = \max (0, \cdot)$.
 
-Given a supervision signal $y \in \caly$ and a loss function $\ell: \bbr^{d_L} \times \caly \mapsto \bbr$, it follows from the chain rule that the corresponding backward propagation rule is
+Given a supervision signal $y \in \caly$ and a loss function $\ell: \bbr^{d_L} \times \caly \mapsto \bbr$, backward propagation refers to the computation of $\{W^{(l)}'\}_{l = 1}^L$ and $\{\pp{\ell}{b_l} (h_L, y)\}$, where $W_{i j}^{(l)}' \triangleq \pp{\ell}{W_{i j}^{(l)}} (h_L, y)$
+it follows from the chain rule that the corresponding backward propagation rule is
 \begin{alignat*}{2}
 h_L' & \triangleq \nabla_{h_L} \ell (h_L, y) \\
-W_L' & \triangleq \nabla_{W_L} \ell (h_L, y) = h_L' h_{L - 1}^T \\
+W^{(L)}' & \triangleq \nabla_{W^{(L)}} \ell (h_L, y) = h_L' h_{L - 1}^T \\
 b_L' & \triangleq \nabla_{b_L} \ell (h_L, y) = h_L' \\
-h_{L - 1}' & \triangleq \nabla_{h_{L - 1}} \ell (h_L, y) = W_L^T h_L' \\
+h_{L - 1}' & \triangleq \nabla_{h_{L - 1}} \ell (h_L, y) = W^{(L) T} h_L' \\
 \bar{h}_l' & \triangleq \nabla_{\bar{h}_l} \ell (h_L, y) = \diag (\sigma' (\bar{h}_l)) h_{l + 1}' && \qquad l \in [L - 1] \\
-W_l' & \triangleq \nabla_{W_l} \ell (h_L, y) = \bar{h}_l' h_{l - 1}^T && \qquad l \in [L - 1] \\
+W^{(l)}' & \triangleq \nabla_{W^{(l)}} \ell (h_L, y) = \bar{h}_l' h_{l - 1}^T && \qquad l \in [L - 1] \\
 b_l' & \triangleq \nabla_{b_l} \ell (h_L, y) = \bar{h}_l' && \qquad l \in [L - 1] \\
-h_l' & \triangleq \nabla_{h_l} \ell (h_L, y) = W_l^T \bar{h}_l' && \qquad l = 0, ..., L - 2
+h_l' & \triangleq \nabla_{h_l} \ell (h_L, y) = W^{(l) T} \bar{h}_l' && \qquad l = 0, ..., L - 2
 \end{alignat*}
 where $\diag (x)_{i j} \triangleq x_i \delta_{i j}$ and the application of $\sigma'$ is again pointwise.
 
@@ -66,9 +73,264 @@ $2$-layer perceptrons with logistic activation function are dense in $L^2 (I_d)$
 
 \subsection{Empirical risk minimization with stochastic gradient descent}
 
-\section{Convolutional neural networks}
+\section{Neural networks for structured data}
 
-\subsection{Motivation}
+Structured data refers to data that may be considered as a mapping $\Omega \mapsto \bbr^d$.
+For example, in the case of sequential/temporal data, $\Omega$ is real intervals representing time;
+in the case of image data, $\Omega$ is rectangles in $\bbr^2$;
+in the case of graph data, $\Omega$ is a graph.
+
+\subsection{Recurrent neural networks: neural networks for sequential/temporal data}
+
+An example of sequential data is sentences in natural languages.
+A natural motivation for the architecture of recurrent neural network (RNN) is the following.
+Suppose we are trying to evaluate the probability for a sequence $\{x_t\}_{t = 1}^T \subset \bbr^d$ to occur.
+It follows from the definition of conditional probability that
+The motivation for RNN is to summarize $\{X_s = x_s : s < t\}$, i.e. the conditions at time $t$, by a vector $h_t \in \bbr^H$, and approximate.
+The simplest
+\[
+W_x x + W
+\]
+\[
+\bbp (X_1 = x_1, ..., X_T = x_T)
+= \prod_{t = 1}^T \bbp (X_t = x_t | X_s = x_s\ \text{for}\ s < t)
+\]
+It is crucial that the number of parameters in recurrent neural networks is independent from the sequence length $T$, which enables RNN's to handle long sequences.
+The performance of RNN depends significantly on how well the vector $h_t$ summarizes the conditions at time $t$.
+It turns out that the simplest RNN can easily "forget" conditions in distant past.
+
+\subsection{Principles of geometric deep learning}
+
+a.k.a. geometric deep learning.
+
+\subsection{Basics of harmonic analysis}
+
+Given $f \in L^1 (\bbr^d)$, the Fourier transform of $f$ is defined as
+\[
+(\calf f) (\xi) = \int_{\bbr^d} e^{-i \xi x} f(x) \dif x
+\]
+It follows that $\calf f \in L^\infty (\bbr^d)$ for $f \in L^1 (\bbr^d)$ because
+\begin{align*}
+\sup_{\xi \in \bbr^d} |(\calf f) (\xi)|
+& = \sup_{\xi \in \bbr^d} \left|\int_{\bbr^d} e^{-i \xi x} f(x) \dif x \right| \\
+& \leq \sup_{\xi \in \bbr^d} \int_{\bbr^d} \left|e^{-i \xi x} f(x) \right| \dif x \\
+& = \sup_{\xi \in \bbr^d} \int_{\bbr^d} |f(x)| \dif x \\
+& = |f|_{L^1 (\bbr^d)}
+\end{align*}
+where $\sup$ denotes the essential supremum, as in the definition of $L^\infty (\bbr^d)$.
+
+A fundamental property of the Fourier transform is that smoothness in the spatial domain implies decay in the frequency domain.
+To state it in a general setting, we introduce the following definitions.
+Given a $d$-dimensional multi-index $\alpha = (\alpha_1, ..., \alpha_d) \in \bbn^d$, the differential operator $D^\alpha$ is defined as
+\[
+D^\alpha \triangleq \frac{\partial^{\alpha_1}}{\partial x_1^{\alpha_1}} \cdot \ldots \cdot \frac{\partial^{\alpha_d}}{\partial x_d^{\alpha_d}}
+\]
+The order $|\alpha|$ of $\alpha$ is defined as
+\[
+|\alpha| \triangleq \sum_{i = 1}^d \alpha^i
+\]
+Define
+\[
+\calc^k \triangleq \{f : D^\alpha f\ \text{is continuous for all}\ |\alpha| \leq k\}
+\]
+We restrict $D^\alpha$ to $\calc^{|\alpha|}$, so that the ordering of partial differential operators in the definition of $D^{\alpha}$ does not matter by Schwarz's theorem.
+For $1 \leq p \leq \infty$ and $k \in \bbn$, the ($L^p$)-Sobolev space of order $k$ is defined as
+\[
+W_p^k \triangleq \{f \in L^p : D^\alpha f \in L^p\ \text{for all}\ |\alpha| \leq k\}
+\]
+Stoke's theorem states that
+\[
+\int_\Omega \dif \omega = \int_{\partial \Omega} \omega
+\]
+
+The Laplacian is defined as
+\[
+\Delta \triangleq \sum_{i = 1}^d \frac{\partial^2}{\partial x_i^2}
+\]
+For a function $u: \bbr^{d + 1} \mapsto \bbr$, where the first $d$ dimensions are spatial and the last dimension is temporal, the heat equation is
+\[
+\pp{u}{t} = c \Delta u
+\]
+
+\subsection{Deep learning on images}
+
+\subsubsection{Non-parametric convolutional neural networks}
+
+It turns out that for some simple tasks, e.g. MNIST digit recognition, convolutional neural networks without learnable parameters can achieve state of the art performance as well.
+In the following we describe the architecture of PCANet \cite{chan2015pcanet}, a convolutional neural network with filters inferred solely from Principle Component Analysis (PCA).
+Consider a dataset consisting of $n$ image-label pairs
+\[
+\{(x_i, y_i)\}_{i \in [n]} \subset \bbr^{W H C} \times \caly
+\]
+where $W$, $H$, and $C$ are the width, height, and number of channels of images, and $\caly$ is the collection of labels.
+
+\subsection{Deep learning on graphs}
+
+In the following we describe neural networks tailored to data with graph structures.
+More precisely, we are interested in data representable as $\calv \mapsto \bbr^d$ for some graph $\calg = (\calv, \cale)$.
+We shall assume that both $\calv$ and $\cale$ are finite and adopt the convention that $n \triangleq |\calv|$ and $m \triangleq |\cale|$.
+We shall identify $\calv$ with $[n]$ and $\cale$ with $[m]$.
+We assume that $\calg$ is undirected, i.e. $(i, j) \in \cale \Leftrightarrow (j, i) \in \cale$ for all $i, j \in \calv$.
+We assume that $\calg$ has no self-connection, i.e. $(i, i) \ne \cale$ for $i \in [n]$.
+Let $M_i$ denote the $i$-th row of $M$, and $M^i$ denote the $i$-th column of $M$.
+
+\subsubsection{Laplacian on graphs}
+
+A real-valued function (signal) on $\calg = (\calv, \cale)$ is a mapping $\calv \mapsto \bbr$, which can be identified with a vector in $\bbr^n$ by identifying $\calv$ with $[n]$.
+We assume that along with $\calg$ comes a real symmetric matrix $W$ and $W_{i j}$ is a positive number interpreted as the strength of connection between $i, j \in \calv$.
+The degree of $i \in \calv$ is defined as
+\[
+\deg (i) \triangleq \sum_{j = 1}^n W_{i j}
+\]
+and the degree matrix $D$ of $\calg$ is an $n \times n$ diagonal matrix defined as
+\[
+D_{i j} \triangleq \delta_{i j} \deg (i)
+\]
+The Laplacian of $\calg$ is defined as
+\[
+L \triangleq D - W
+\]
+An alternative motivation for the definition of graph Laplacian is the following.
+Suppose $u: \calv \times \bbr \mapsto \bbr$ describes the evolution of heat distribution over $\calv$.
+Newton's law of cooling states that the heat transferred between $i, j \in \calv$ in an infinitestimal period of time is proportional to the difference $u_i - u_j$ when $(i, j) \in \cale$.
+Consequently,
+\begin{align*}
+\pp{u_i}{t}
+& = -c \sum_{(i, j) \in \cale} w_{i j} (u_i - u_j) \\
+& = -c \left(\deg (i) u_i - \sum_{(i, j) \in \cale} w_{i j} u_j\right)
+\end{align*}
+Vectorizing the identity, we have
+\begin{align*}
+\pp{u}{t}
+& = -c (D u - A u) \\
+& = -c (D - A) u \\
+& = -c L u
+\end{align*}
+
+\subsubsection{Convolution on graphs}
+
+\begin{equation*}
+f * g (x) \triangleq \int_{\bbr^d} f(y) (\calt_x (\calr g)) (y) dy
+\end{equation*}
+where $(\calr g) (\cdot) \triangleq g(-\cdot)$ is the reflection operator and $(\calt_x g) (\cdot) \triangleq g(x + \cdot)$ is the translation (by $x$) operator.
+Neither $\calr$ nor $\calt_x$ makes sense when we replace $\bbr^d$ by $\calg$.
+\begin{equation*}
+f * g = \calf^{-1} (\calf  f \calf g)
+\end{equation*}
+
+Other definitions of Laplacian exists in the literature.
+For example, the random walk Laplacian is defined as
+\[
+L^{RW} \triangleq I - W D^{-1}
+\]
+However, the random walk Laplacian is in general asymmetric and thus unsuitable for our purpose.
+It follows from the spectral theorem for real symmetric matrix that $L$ admits the decomposition
+\begin{equation*}
+L = U^T \Lambda U
+\end{equation*}
+where $U \in SO(n)$, $L U_i = \Lambda_{i i} U_i$ for $i \in [n]$, $\Lambda$ is diagonal, and $\Lambda_{i i} \leq \Lambda_{j j} \forall 1 \leq i < j \leq n$.
+\begin{equation*}
+(U f)_i
+= f^T U_i
+= <f, U_i>_{\bbr^b}
+\end{equation*}
+which is analoguous to
+\begin{equation*}
+(\calf f) (n)
+\triangleq \int_T e^{-i n x)} f(x) \dif x
+= <e^{-i n \cdot}, f>_{L^2}
+\end{equation*}
+We can define Fourier transform $\calf$ on $\calg$ analoguously as
+\begin{equation*}
+\calf f \triangleq U f
+\end{equation*}
+Because $U^T U = I$ on $\bbr^n$ and $\calf^{-1} \calf = I$ on $L^2$, a natural definition for inverse Fourier transform on $\calg$ is
+\begin{equation*}
+\calf^{-1} \triangleq U^T
+\end{equation*}
+
+\begin{equation*}
+f * g
+\triangleq \calf^{-1} (\calf f \cdot \calf g)
+= U^T (U f \odot U g)
+\end{equation*}
+where $\odot$ denotes the Hadamard product.
+Analoguous to the approach to convolution on image, one of $f$ and $g$ filter and the other signal.
+In the following let $x$ denote a signal and $\theta$ denote a filter.
+\[
+\theta * x
+= U^T (U \theta \odot U x)
+\]
+Because $U \in SO(n)$,
+\[
+\theta * x
+= U^T (\theta \odot U x)
+= U^T (\diag (\theta) U x)
+\]
+(possibly with nonlinearity attached)
+
+However, this construction has two disadvantages.
+First,
+Second, computing the eigen-decomposition $U^T \Lambda U$ is expensive.
+One solution, proposed by \cite{defferrard2016convolutional}, is to replace $\diag (\theta)$ with a polynomial of $\Lambda$ with learnable coefficient.
+Suppose $\Theta = \sum_{k = 0}^K \theta_k \Lambda^k$.
+\begin{align*}
+\Theta * x
+& = U^T \Theta U x \\
+& = U^T \left(\sum_{k = 0}^K \theta_k \Lambda^k \right) U x \\
+& = \left(\sum_{k = 0}^K \theta_k U^T \Lambda^k U \right) x \\
+& = \sum_{k = 0}^K \theta_k L^k x
+\end{align*}
+where the last identity follows from the fact that
+\[
+L L
+= U^T \Lambda U U^T \Lambda U
+= U^T \Lambda^2 U
+\]
+It follows from the definition of $L$ that $L$ contains $n + 2 m$ non-zero entries, which is significantly less than $n^2$ when $\calg$ is sparse, i.e. when $m / n^2 \rightarrow 0$.
+An efficient implementation of $L x$, commonly referred to as Sparse Matrix-Vector multiplication (SpMV), only requires $\calo ()$ time.
+The choice
+\[
+\Theta = 
+\]
+results in the popular Graph Convolutional Network (GCN) \cite{kipf2016semi}.
+
+\subsubsection{Spectral clustering revisited}
+
+In the following we describe a neural network architecture motivated by an improved spectral clustering algorithm.
+
+A natural setting for theoretical analysis of spectral clustering algorithms is the Stochastic Block Model (SBM).
+In the binary case, given a collection of nodes $\calv = [n]$ and a label assignment $\sigma: \calv \mapsto {\pm 1}$, the probability for two nodes $i, j \in \calv$ to be connected is
+\[
+\bbp [(i, j) \in \cale]
+= \ind_{\sigma_i = \sigma_j} p_{in} + \ind_{\sigma_i \ne \sigma_j} p_{out}
+\]
+where $p_{in}$ denotes the probability of an inter-community edge and $p_{out}$ denotes the probability of an extra-community edge.
+To model sparse graphs, let
+\[
+p_{in} = \frac{c_{in}}n \qquad
+p_{out} = \frac{c_{out}}n
+\]
+where $c_{in}$ and $c_{out}$ are constants, and $n \rightarrow \infty$.
+detectability threshold:
+\[
+c_{in} - c_{out}
+\]
+SBM can model many real world graphs, in particular, social networks.
+"Birds of a feather flock together."
+Most real world graphs are bounded.
+
+It turns out that standard spectral clustering fails at the limit $n \rightarrow \infty$ even if detectable.
+
+
+\section{Optimization of neural networks}
+
+\subsection{Stochastic gradient descent}
+
+\subsection{The challenge of saddle points}
+
+It turns out that compared with encountering local minima, it is significantly more likely to encounter saddle points if one applies SGD to neural networks.
+The following is several related results.
 
 \bibliographystyle{unsrt}
 \bibliography{written}
