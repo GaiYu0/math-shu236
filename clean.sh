@@ -1,1 +1,1 @@
-rm -f *.aux *.bbl *.blg *.log *.out *.pdf *.toc
+rm -f *.aux *.bbl *.blg *.log *.nav *.out *.pdf *.snm *.toc
